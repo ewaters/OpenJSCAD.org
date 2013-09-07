@@ -5963,6 +5963,13 @@ CSG.Polygon2D = function(points) {
 };
 CSG.Polygon2D.prototype = CAG.prototype;
 
+CSG.prototype.setPriority = function (i) {
+	this.properties.priority = i;
+	return this;
+};
+CSG.prototype.priority = function (i) {
+	return this.properties.priority || 0;
+};
 
 module.CSG = CSG;
 module.CAG = CAG;
