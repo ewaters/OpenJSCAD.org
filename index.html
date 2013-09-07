@@ -52,6 +52,7 @@ Todo:
 <script src="openjscad.js"></script>
 <script src="openscad.js"></script>
 <script src="underscore.js"></script>
+<script src="parts.js"></script>
 <script src="openscad-openjscad-translator.js"></script>
 <script lang=JavaScript>
 var version = '0.017 (2013/06/10)';
@@ -391,7 +392,7 @@ if(me=='web-online') {
     <div id="filebuttons">
       <button id="getstlbutton" style="display:none" onclick="getStl();">Get STL</button>
       <button onclick="superviseAllFiles({forceReload:true});">Reload</button>
-      <!--button onclick="parseFile(gCurrentFile,true,false);">Debug (see below)</button-->
+	  <button onclick="parseFile(gCurrentFile,true,false);">Debug (see below)</button>
 	   <label for="autoreload">Auto Reload</label><input type="checkbox" name="autoreload" value="" id="autoreload" onclick="toggleAutoReload();">
     </div>
   </div>
@@ -488,6 +489,8 @@ function onload() {
    }
    
    gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
+   gProcessor.addLibrary("underscore.js");
+   gProcessor.addLibrary("parts.js");
    setupDragDrop();
    //gProcessor.setDebugging(debugging); 
    if(me=='web-online') {    // we are online, fetch first example
