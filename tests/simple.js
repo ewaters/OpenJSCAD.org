@@ -6,32 +6,38 @@ function common() {
 		.rotateZ(90)
 		.translate([0,0,3.5/2])
 		.setColor(0.5,0.8,0.5,0.5);
-	return parts;
+	return new PartGroup(parts);
 }
 
 function goal() {
 	var parts = common();
-	parts.top = parts.top.subtract(parts.bottom);
+	var top = parts.mutableNamedPart('top');
+	top.mesh = top.mesh.subtract(parts.named('bottom'));
+	/*
+	parts.mutateNamedPart('top', function (part) {
+		return part.subtract(parts.named('bottom'));
+	});
+	*/
 	return parts;
 }
 
 function implementation() {
-	var group = new PartGroup(common());
-	group.getNamedPart('bottom').setPriority(1);
-	group.prioritizedSubtraction();
-	return group.asObject();
+	var parts = common();
+	parts.named('bottom').setPriority(1);
+	parts.prioritizedSubtraction();
+	return parts;
 }
 
 function main() {
 	var items = [],
 		partsGoal = goal(),
 		partsImpl = implementation();
-	_.forEach(partsImpl, function (item, key) {
-		partsImpl[key] = item.translate([0,20,0]);
-	});
+
+	partsImpl.translate([0,20,0]);
+
 	[ partsGoal, partsImpl ].forEach(function (parts) {
-		items.push(parts.bottom);
-		items.push(parts.top.translate([0,0,5]));
+		items.push(parts.named('bottom'));
+		items.push(parts.named('top').translate([0,0,5]));
 	});
 	return items;
 }

@@ -4,11 +4,25 @@ var PartGroup = function (parts) {
 	this.parts = [];
 	this.names = {};
 	this.namesByIdx = [];
+
+	// Initialization is optional.
+	if (parts === undefined) return;
+
+	// The caller may provide a list of CSG meshes.
+	if (parts instanceof CSG) {
+		for (var i = 0; i < arguments.length; i++) {
+			self.addPart(arguments[i]);
+		}
+		return;
+	}
+
+	// Or a named list of meshes.
 	if (_.isObject(parts)) {
 		_.forEach(parts, function (part, name) {
 			self.addNamedPart(name, part);
 		});
 	}
+	// Or an array of meshes.
 	else if (_.isArray(parts)) {
 		_.forEach(parts, function (part) {
 			self.addPart(part);
@@ -16,80 +30,117 @@ var PartGroup = function (parts) {
 	}
 };
 
-PartGroup.prototype.addNamedPart = function (name, part) {
-	var id = this.idx++;
-	this.parts[id] = part;
-	this.names[name] = id;
-	this.namesByIdx[id] = name;
-};
+PartGroup.prototype = {
+	addNamedPart: function (name, part) {
+		var id = this.idx++;
+		this.parts[id] = part;
+		this.names[name] = id;
+		this.namesByIdx[id] = name;
+	},
 
-PartGroup.prototype.addPart = function (part) {
-	var id = this.idx++;
-	this.parts[id] = part;
-};
+	addPart: function (part) {
+		var id = this.idx++;
+		this.parts[id] = part;
+	},
 
-PartGroup.prototype.getNamedPart = function (name) {
-	var id = this.names[name];
-	if (id === undefined) {
-		console.error("No such part named '" + name + "'");
-		return;
-	}
-	return this.parts[id];
-};
+	idxFromName: function (name) {
+		var id = this.names[name];
+		if (id === undefined) {
+			console.error("No such part named '" + name + "'");
+			return;
+		}
+		return id;
+	},
 
-PartGroup.prototype.mutateAll = function (mutation) {
-	this.parts = _.map(this.parts, mutation);
-};
+	named: function (name) {
+		var idx = this.idxFromName(name);
+		if (idx === undefined) return;
+		return this.parts[idx];
+	},
 
-PartGroup.prototype.prioritizedSubtraction = function () {
-	var partsByPriority = {};
+	mutableNamedPart: function (name) {
+		var idx = this.idxFromName(name);
+		if (idx === undefined) return;
+		return new PartGroup.UpdateablePart(this, idx);
+	},
 
-	this.updateableParts().forEach(function (part) {
-		var prio = part.get().priority();
-		if (partsByPriority[prio] === undefined)
-			partsByPriority[prio] = [];
-		partsByPriority[prio].push(part);
-	});
+	mutateNamedPart: function (name, mutation) {
+		var idx = this.idxFromName(name);
+		if (idx === undefined) return;
+		this.parts[idx] = mutation(this.parts[idx]);
+		return this;
+	},
 
-	// Start will parts that have lower priority.  For each, subtract all the
-	// parts that have a higher priority.
-	_.keys(partsByPriority).sort().forEach(function (prio) {
-		partsByPriority[prio].forEach(function (part) {
-			var item = part.get(),
-				mutated = false;
-			_.forEach(partsByPriority, function (group, testPrio) {
-				if (testPrio <= prio) return;
-				mutated = true;
-				group.forEach(function (higherPart) {
-					item = item.subtract(higherPart.get());
-				});
-			});
-			if (! mutated) return;
-			part.set(item);
+	mutateAll: function (mutation) {
+		this.parts = _.map(this.parts, mutation);
+		return this;
+	},
+
+	translate: function (value) {
+		this.mutateAll(function (item) {
+			return item.translate(value);
 		});
-	});
-};
+		return this;
+	},
 
-PartGroup.prototype.asArray = function () {
-	return this.parts;
-};
+	prioritizedSubtraction: function () {
+		var partsByPriority = {};
 
-PartGroup.prototype.asObject = function () {
-	var self = this,
-		obj  = {};
-	_.forEach(this.parts, function (part, id) {
-		var name = self.namesByIdx[id];
-		if (name === undefined) return;
-		obj[name] = part;
-	});
-	return obj;
-};
+		this.updateableParts().forEach(function (part) {
+			var prio = part.get().priority();
+			if (partsByPriority[prio] === undefined)
+				partsByPriority[prio] = [];
+			partsByPriority[prio].push(part);
+		});
 
-PartGroup.prototype.updateableParts = function () {
-	var self = this;
-	return _.map(this.parts, function (part, idx) {
-		return new PartGroup.UpdateablePart(self, idx);
-	});
+		// Start will parts that have lower priority.  For each, subtract all the
+		// parts that have a higher priority.
+		_.keys(partsByPriority).sort().forEach(function (prio) {
+			partsByPriority[prio].forEach(function (part) {
+				var item = part.get(),
+					mutated = false;
+				_.forEach(partsByPriority, function (group, testPrio) {
+					if (testPrio <= prio) return;
+					mutated = true;
+					group.forEach(function (higherPart) {
+						item = item.subtract(higherPart.get());
+					});
+				});
+				if (! mutated) return;
+				part.set(item);
+			});
+		});
+	},
+
+	colorize: function () {
+		this.mutateAll(function (part, idx) {
+			return part.setColor([
+				Math.random(), Math.random(), Math.random()
+			]);
+		});
+	},
+
+	asArray: function () {
+		return this.parts;
+	},
+
+	asObject: function () {
+		var self = this,
+			obj  = {};
+		_.forEach(this.parts, function (part, id) {
+			var name = self.namesByIdx[id];
+			if (name === undefined) return;
+			obj[name] = part;
+		});
+		return obj;
+	},
+
+	updateableParts: function () {
+		var self = this;
+		return _.map(this.parts, function (part, idx) {
+			return new PartGroup.UpdateablePart(self, idx);
+		});
+	}
 };
 
 PartGroup.UpdateablePart = function (group, idx) {
@@ -97,11 +148,22 @@ PartGroup.UpdateablePart = function (group, idx) {
 	this.idx   = idx;
 };
 
-PartGroup.UpdateablePart.prototype.get = function () {
-	return this.group.parts[ this.idx ];
-};
+PartGroup.UpdateablePart.prototype = {
 
-PartGroup.UpdateablePart.prototype.set = function (part) {
-	this.group.parts[ this.idx ] = part;
-	return part;
+	get: function () {
+		return this.group.parts[ this.idx ];
+	},
+
+	set: function (part) {
+		this.group.parts[ this.idx ] = part;
+		return part;
+	},
+
+	get mesh() {
+		return this.get();
+	},
+
+	set mesh(v) {
+		return this.set(v);
+	}
 };
