@@ -16,9 +16,10 @@ function goal() {
 }
 
 function implementation() {
-	var parts = common();
-	parts.bottom.setPriority(1);
-	return parts;
+	var group = new PartGroup(common());
+	group.getNamedPart('bottom').setPriority(1);
+	group.prioritizedSubtraction();
+	return group.asObject();
 }
 
 function main() {
@@ -33,19 +34,4 @@ function main() {
 		items.push(parts.top.translate([0,0,5]));
 	});
 	return items;
-}
-
-function prioritizedSubtraction() {
-	var result = [], itemsByPriority = {};
-
-	for (var i = 0; i < arguments.length; i++) {
-		var item = arguments[i],
-			prio = item.priority();
-		if (itemsByPriority[prio] === undefined)
-			itemsByPriority[prio] = [];
-		itemsByPriority[prio].push(item);
-		result.push(item);
-	}
-
-	return result;
 }
