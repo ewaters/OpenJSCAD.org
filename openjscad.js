@@ -1152,6 +1152,7 @@ OpenJsCad.Processor.prototype = {
     {
       try
       {
+          console.log("trying sync compute");
         this.statusspan.innerHTML = "Rendering code, please wait <img id=busy src='imgs/busy.gif'>";
         var obj = OpenJsCad.parseJsCadScriptSync(this.script, paramValues, this.debugging);
         that.setCurrentObject(obj);
@@ -1160,6 +1161,7 @@ OpenJsCad.Processor.prototype = {
       }
       catch(e)
       {
+		  console.log(e.message);
         that.processing = false;
         var errtxt = e.stack;
         if(!errtxt)
@@ -1479,5 +1481,4 @@ OpenJsCad.Processor.prototype = {
     this.paramControls = paramControls;
   },
 };
-
 
