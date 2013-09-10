@@ -120,6 +120,45 @@ PartGroup.prototype = {
 		});
 	},
 
+	// Each part will be rotated such that it's longest dimension,
+	// in decreasing order, falls along the given axes.  So,
+	// if this is ['y', 'x', 'z'], then the longest dimension will
+	// be oriented along the y axis, then x, then z.
+	orientAll: function (orientation) {
+		this.mutateAll(function (part) {
+			var bounds, dim, longest, axis, nextLongest, rotateAxis, rotateMethod;
+			// Rotate up to two times, 90 degrees along different axes depending
+			// on which is the next longest dimension of the bounding box.
+			for (var i = 0; i < 2; i++) {
+				bounds  = part.getBounds();
+				dim     = bounds[1].minus(bounds[0]);
+				longest = _.sortBy(['x', 'y', 'z'], function (axis) {
+					return -dim[axis];
+				});
+
+				axis        = orientation[i];
+				nextLongest = longest[i];
+				if (nextLongest === axis) continue;
+
+				switch (axis) {
+					case 'x':
+						rotateAxis = nextLongest === 'y' ? 'z' : 'y';
+						break;
+					case 'y':
+						rotateAxis = nextLongest === 'z' ? 'x' : 'z';
+						break;
+					case 'z':
+						rotateAxis = nextLongest === 'x' ? 'y' : 'x';
+						break;
+				}
+				rotateMethod = 'rotate' + rotateAxis.toUpperCase();
+				part = part[rotateMethod](90);
+				//console.info(rotateMethod + " to orient along " + axis);
+			}
+			return part;
+		});
+	},
+
 	asArray: function () {
 		return this.parts;
 	},
