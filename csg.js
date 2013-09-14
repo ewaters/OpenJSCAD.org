@@ -4768,6 +4768,10 @@ CSG.Properties.addFrom = function(result, otherproperties) {
 	for(var propertyname in otherproperties) {
 		if(propertyname == "_transform") continue;
 		if(propertyname == "_merge") continue;
+
+		// Properties starting with an underscore will not be merged
+		if (propertyname[0] === "_") continue;
+
 		if((propertyname in result) &&
 				(typeof(result[propertyname]) == "object") &&
 				(result[propertyname] instanceof CSG.Properties) &&
@@ -5045,15 +5049,36 @@ CSG.addTransformationMethodsToPrototype = function(prot) {
 		return this.transform(CSG.Matrix4x4.scaling(f));
 	};
 
+	prot.addUnrotate = function (f) {
+		if (this.properties._unrotateFunctions === undefined)
+			this.properties._unrotateFunctions = [];
+		this.properties._unrotateFunctions.unshift(f);
+	};
+
+	prot.unrotate = function () {
+		var funcs = this.properties._unrotateFunctions;
+		delete this.properties._unrotateFunctions;
+		if (funcs === undefined) return this;
+
+		var mesh = this;
+		_.forEach(funcs, function (f) {
+			mesh = f(mesh);
+		});
+		return mesh;
+	};
+
 	prot.rotateX = function(deg) {
+		this.addUnrotate(function (m) { return m.rotateX(-deg) });
 		return this.transform(CSG.Matrix4x4.rotationX(deg));
 	};
 
 	prot.rotateY = function(deg) {
+		this.addUnrotate(function (m) { return m.rotateY(-deg) });
 		return this.transform(CSG.Matrix4x4.rotationY(deg));
 	};
 
 	prot.rotateZ = function(deg) {
+		this.addUnrotate(function (m) { return m.rotateZ(-deg) });
 		return this.transform(CSG.Matrix4x4.rotationZ(deg));
 	};
 
@@ -5969,6 +5994,45 @@ CSG.prototype.setPriority = function (i) {
 };
 CSG.prototype.priority = function (i) {
 	return this.properties.priority || 0;
+};
+
+// Reorients the mesh so that it's axis bounding box's largest
+// dimension, in decreasing order, falls along the given axes.  So, if this
+// is ['y', 'x', 'z'], then the longest dimension will be oriented along
+// the y axis, then x, then z.
+CSG.prototype.orientByAxisBoundingBox = function (orientation) {
+	var bounds, dim, longest, axis, nextLongest,
+		rotateAxis, rotateMethod;
+	var mesh = this;
+	// Rotate up to two times, 90 degrees along different axes depending
+	// on which is the next longest dimension of the bounding box.
+	for (var i = 0; i < 2; i++) {
+		bounds  = mesh.getBounds();
+		dim     = bounds[1].minus(bounds[0]);
+		longest = _.sortBy(['x', 'y', 'z'], function (axis) {
+			return -dim[axis];
+		});
+
+		axis        = orientation[i];
+		nextLongest = longest[i];
+		if (nextLongest === axis) continue;
+
+		switch (axis) {
+			case 'x':
+				rotateAxis = nextLongest === 'y' ? 'z' : 'y';
+				break;
+			case 'y':
+				rotateAxis = nextLongest === 'z' ? 'x' : 'z';
+				break;
+			case 'z':
+				rotateAxis = nextLongest === 'x' ? 'y' : 'x';
+				break;
+		}
+		rotateMethod = 'rotate' + rotateAxis.toUpperCase();
+		mesh = mesh[rotateMethod](90);
+		//console.info(rotateMethod + " to orient along " + axis);
+	}
+	return mesh;
 };
 
 module.CSG = CSG;
