@@ -5,7 +5,7 @@ function common() {
 		cube([2,5,10]).translate([8,0,0]).rotateY(-10),
 		cube([4,2,8]).translate([12,1,2]).rotateX(13),
 		cube([10,4,4]).translate([21,5,0]).rotateZ(9),
-		cube([10,1,2]).translate([22,-9,0]),
+		cube([10,1,2]).translate([22,-9,0]).rotateX(15).rotateY(-27),
 		cylinder({ r: 4 }).translate([0,-10,4]).rotateX(-90),
 		sphere({ r: 2, center: false }).translate([10,-9,2])
 	);

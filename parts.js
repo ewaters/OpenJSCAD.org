@@ -72,7 +72,10 @@ PartGroup.prototype = {
 	},
 
 	mutateAll: function (mutation) {
-		this.parts = _.map(this.parts, mutation);
+		this.parts = _.filter(
+			_.map(this.parts, mutation),
+			function (item) { return item !== undefined; }
+		);
 		return this;
 	},
 
@@ -123,18 +126,27 @@ PartGroup.prototype = {
 	},
 
 	arrangeBySize: function (specs) {
-		specs = specs !== undefined ? specs : {
-			x_max: -1,
-			y_max: 0,
-			z_max: 0,
+		if (specs === undefined) specs = {};
+		_.defaults(specs, {
+			dedupe: false,
 			padding: 2,
 			orientation: ['y', 'x', 'z']
-		};
+		});
 
 		// Orient and unrotate all of the parts.
 		this.mutateAll(function (part) {
 			return part.unrotate().orientByAxisBoundingBox(specs.orientation);
 		});
+
+		if (specs.dedupe) {
+			var hashes = {};
+			this.mutateAll(function (part) {
+				var hash = part.signature();
+				if (hashes[hash] !== undefined) return;
+				hashes[hash] = 1;
+				return part;
+			});
+		}
 
 		// Sort the parts by volume, greatest to least.
 		var volumeByIdx = {};
@@ -162,6 +174,8 @@ PartGroup.prototype = {
 				new CSG.Vector3D([ dim.x + specs.padding, 0, 0 ])
 			);
 		});
+
+		return this;
 	},
 
 	combine: function () {
