@@ -5056,14 +5056,16 @@ CSG.addTransformationMethodsToPrototype = function(prot) {
 	};
 
 	prot.unrotate = function () {
+		if (this.properties._unrotateFunctions === undefined)
+			return this;
 		var funcs = this.properties._unrotateFunctions;
-		delete this.properties._unrotateFunctions;
-		if (funcs === undefined) return this;
 
-		var mesh = this;
-		_.forEach(funcs, function (f) {
-			mesh = f(mesh);
-		});
+		var mesh = CSG.fromObject(this);
+		for (var i = 0; i < funcs.length; i++)
+			mesh = funcs[i](mesh);
+
+		// Ensure calling unrotate() on the returned CSG is a no-op.
+		delete mesh.properties._unrotateFunctions;
 		return mesh;
 	};
 
@@ -6003,6 +6005,7 @@ CSG.prototype.priority = function (i) {
 CSG.prototype.orientByAxisBoundingBox = function (orientation) {
 	var bounds, dim, longest, axis, nextLongest,
 		rotateAxis, rotateMethod;
+	if (orientation === undefined) orientation = ['y', 'x', 'z'];
 	var mesh = this;
 	// Rotate up to two times, 90 degrees along different axes depending
 	// on which is the next longest dimension of the bounding box.
@@ -6033,6 +6036,50 @@ CSG.prototype.orientByAxisBoundingBox = function (orientation) {
 		//console.info(rotateMethod + " to orient along " + axis);
 	}
 	return mesh;
+};
+
+CSG.prototype.toVerticesString = function () {
+	var vertices = {};
+	/*
+	mesh.polygons.forEach(function (p) {
+		p.vertices.forEach(function (v) {
+			var k = ['x', 'y', 'z']
+				.map(function (axis) {
+					return v.pos['_' + axis].toFixed(6) * 1;
+				})
+				.join(':');
+			vertices[k] = 1;
+		});
+	});
+	*/
+	// This one is not as fun to write but it's probably faster
+	for (var i = 0; i < this.polygons.length; i++) {
+		for (var j = 0; j < this.polygons[i].vertices.length; j++) {
+			var pos = this.polygons[i].vertices[j].pos;
+			var k =   pos._x.toFixed(6) * 1 +
+				':' + pos._y.toFixed(6) * 1 +
+				':' + pos._z.toFixed(6) * 1;
+			vertices[k] = 1;
+		}
+	}
+	return _.keys(vertices).sort().join(' ');
+};
+
+// Generate a hash which uniquely identifies this part.  At the moment,
+// only the vertices are considered, so two models with the same set of
+// vertices but different polygons formed between them would have the
+// same signature.  This is done to simplify the calcuations, as it's
+// difficult to homogenize the polygon loops.
+CSG.prototype.signature = function () {
+	var mesh = this.unrotate()
+		.orientByAxisBoundingBox();
+
+	var bounds = mesh.getBounds(),
+		xform  = bounds[0].negated(),
+		mesh   = mesh.translate(xform),
+		string = mesh.toVerticesString();
+
+	return md5(string);
 };
 
 module.CSG = CSG;

@@ -53,6 +53,7 @@ Todo:
 <script src="openscad.js"></script>
 <script src="underscore.js"></script>
 <script src="parts.js"></script>
+<script src="md5.js"></script>
 <script src="openscad-openjscad-translator.js"></script>
 <script lang=JavaScript>
 var version = '0.017 (2013/06/10)';
@@ -491,6 +492,7 @@ function onload() {
    gProcessor = new OpenJsCad.Processor(document.getElementById("viewer"));
    gProcessor.addLibrary("underscore.js");
    gProcessor.addLibrary("parts.js");
+   gProcessor.addLibrary("md5.js");
    setupDragDrop();
    //gProcessor.setDebugging(debugging); 
    if(me=='web-online') {    // we are online, fetch first example
